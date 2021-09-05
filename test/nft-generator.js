@@ -1,6 +1,9 @@
 const { expect, assert } = require("chai");
 const { artifacts } = require("hardhat");
+const { default: Web3 } = require("web3");
 const NftGenerator = artifacts.require("NftGenerator");
+
+const toWei = (_amount) => web3.utils.toWei(_amount.toString());
 
 contract("NftGenerator", async ([deployer, user1, user2]) => {
 	const tokenURI = "MY token URI";
@@ -11,9 +14,9 @@ contract("NftGenerator", async ([deployer, user1, user2]) => {
 
 	describe("deployment", () => {
 		it("should deploy contract properly", async () => {
-			expect(this.contract.address).not.equal("");
+			expect(this.contract.address).not.null;
 			expect(this.contract.address).not.equal(undefined);
-			expect(this.contract.address).not.equal(null);
+			expect(this.contract.address).not.equal("");
 		});
 
 		it("should set name properly", async () => {
@@ -25,25 +28,25 @@ contract("NftGenerator", async ([deployer, user1, user2]) => {
 		});
 	});
 
-	describe("random function", () => {
-		it("should generate a word containing 4 random characters", async () => {
-			const _randowWord = await this.contract.random();
-			expect(_randowWord.split(" ").length).to.equal(4);
-		});
-	});
+	// describe("random function", () => {
+	// 	it("should generate a word containing 4 random characters", async () => {
+	// 		const _randowWord = await this.contract.random();
+	// 		expect(_randowWord.split(" ").length).to.equal(4);
+	// 	});
+	// });
 
-	describe("claim function", () => {
+	describe("mint function", () => {
 		let _reciept;
 
 		beforeEach(async () => {
 			const _fee = await this.contract.Fee();
-			_reciept = await this.contract.claim(tokenURI, {
+			_reciept = await this.contract.mint({
 				from: user1,
 				value: _fee,
 			});
 		});
 
-		it("should claim NFT properly", async () => {
+		it("should mint NFT properly", async () => {
 			let _tokenId;
 			for (let i = 0; i < _reciept.logs.length; ++i) {
 				if (_reciept.logs[i].event === "Claimed") {
@@ -53,28 +56,60 @@ contract("NftGenerator", async ([deployer, user1, user2]) => {
 			}
 
 			const _word = await this.contract.wordLists(_tokenId);
+			console.log("_tokenId", _tokenId);
 			console.log("word", _word);
 
-			expect(await this.contract.tokenURI(_tokenId)).to.equal(tokenURI);
+			console.log(await this.contract.tokenURI(_tokenId));
 			expect(_word).not.null;
 			expect(_word).not.equal("");
 		});
 
 		it("should reject if amount is less than fee", async () => {
 			try {
-				await this.contract.claim(tokenURI, {
+				await this.contract.mint({
 					from: user1,
 					value: "1",
 				});
 			} catch (error) {
 				assert(
 					error.message.includes(
-						"NftGenerator: Claim fee must be equal to 0.05 ether"
+						"NftGenerator: mint fee must be equal to 0.05 ether"
 					)
 				);
 				return;
 			}
 			assert(false);
+		});
+
+		it("should set fee to contract address", async () => {
+			expect(await web3.eth.getBalance(this.contract.address)).to.equal(
+				(await this.contract.Fee()).toString()
+			);
+		});
+	});
+
+	describe("withdraw", () => {
+		beforeEach(async () => {
+			const _fee = await this.contract.Fee();
+			await this.contract.mint({
+				from: user1,
+				value: _fee,
+			});
+			await this.contract.mint({
+				from: user2,
+				value: _fee,
+			});
+			await this.contract.mint({
+				from: user1,
+				value: _fee,
+			});
+			await this.contract.withdraw(toWei(0.1), { from: deployer });
+		});
+
+		it("should withdraw fee to contract address", async () => {
+			expect(await web3.eth.getBalance(this.contract.address)).to.equal(
+				toWei(0.05)
+			);
 		});
 	});
 });

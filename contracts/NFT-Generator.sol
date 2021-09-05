@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
+import  "./utils/Base64.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, ReentrancyGuard {    
+    using Base64 for *;
     uint256 public Fee;
 
     string[] private _alphabets = [
@@ -34,13 +36,38 @@ contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, Reen
     }
 
     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
-        return super.tokenURI(tokenId);
+        string[3] memory parts;
+        parts[
+            0
+        ] = '<svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" viewBox="0 0 350 350"><style>.base { fill: black; font-family: helvetica; font-size: 25px; }</style><rect width="100%" height="100%" fill="white" /><text x="10" y="20" class="base">';
+        parts[1] = wordLists[tokenId];
+        parts[2] = "</text></svg>";
+
+        string memory output = string(
+            abi.encodePacked(parts[0], parts[1], parts[2])
+        );
+
+        string memory json = Base64.encode(
+            bytes(
+                string(
+                    abi.encodePacked(
+                        '{"name": "NftGenerator ',
+                        wordLists[tokenId],
+                        '", "description": "NftGenerator is the first random letter generator.", "image": "data:image/svg+xml;base64,',
+                        Base64.encode(bytes(output)),
+                        '"}'
+                    )
+                )
+            )
+        );
+        output = string(abi.encodePacked("data:application/json;base64,", json));
+
+        return output;
     }
 
-    function claim(string memory _tokenURI) external payable nonReentrant {
-        require(msg.value >= Fee, "NftGenerator: Claim fee must be equal to 0.05 ether");
+    function mint() external payable nonReentrant {
+        require(msg.value >= Fee, "NftGenerator: mint fee must be equal to 0.05 ether");
         string memory _randomWord = random();
-
         require(!_used[_randomWord], "NftGenerator: TokenID has already been claimed");
 
         uint256 _tokenId = uint256(keccak256(abi.encode(_randomWord)));
@@ -48,12 +75,11 @@ contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, Reen
         _used[_randomWord] = true;
         wordLists[_tokenId] = _randomWord;
         _safeMint(_msgSender(), _tokenId);
-        _setTokenURI(_tokenId, _tokenURI);
 
         emit Claimed(_msgSender(), _tokenId, block.timestamp);
     }
 
-    function random() public view returns(string memory _random) {
+    function random() internal view returns(string memory _random) {
         uint256[4] memory _randomID;
 
         for(uint256 i = 0; i < 4; ++i) {
@@ -72,7 +98,6 @@ contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, Reen
                 _alphabets[_randomID[3]]
             )
         );
-        console.log("Random string", _random);
         return _random;
     }
 
