@@ -1,10 +1,9 @@
-// SPDX-License-Identifier: MIT
-pragma solidity 0.8.7;
-
 /// [MIT License]
 /// @title Base64
 /// @notice Provides a function for encoding some bytes in base64
 /// @author Brecht Devos <brecht@loopring.org>
+pragma solidity 0.8.7;
+
 library Base64 {
     bytes internal constant TABLE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

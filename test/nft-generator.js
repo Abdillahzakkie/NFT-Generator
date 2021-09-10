@@ -1,15 +1,15 @@
 const { expect, assert } = require("chai");
 const { artifacts } = require("hardhat");
 const { default: Web3 } = require("web3");
-const NftGenerator = artifacts.require("NftGenerator");
+const NftGenerator1 = artifacts.require("NftGenerator1");
 
 const toWei = (_amount) => web3.utils.toWei(_amount.toString());
 
-contract("NftGenerator", async ([deployer, user1, user2]) => {
+contract("NftGenerator1", async ([deployer, user1, user2]) => {
 	const tokenURI = "MY token URI";
 
 	beforeEach(async () => {
-		this.contract = await NftGenerator.new({ from: deployer });
+		this.contract = await NftGenerator1.new({ from: deployer });
 	});
 
 	describe("deployment", () => {
@@ -28,21 +28,21 @@ contract("NftGenerator", async ([deployer, user1, user2]) => {
 		});
 	});
 
-	describe("random function", () => {
-		it("should generate a word containing 4 random characters", async () => {
-			const _randowWord = await this.contract.random();
-			expect(_randowWord.split(" ").length).to.equal(4);
-		});
-	});
+	// describe("random function", () => {
+	// 	it("should generate a word containing 4 random characters", async () => {
+	// 		const _randowWord = await this.contract.random();
+	// 		expect(_randowWord.split(" ").length).to.equal(4);
+	// 	});
+	// });
 
 	describe("mint function", () => {
 		let _reciept;
 
 		beforeEach(async () => {
-			// const _fee = await this.contract.Fee();
+			const _fee = await this.contract.Fee();
 			_reciept = await this.contract.mint({
 				from: user1,
-				// value: _fee,
+				value: _fee,
 			});
 		});
 
