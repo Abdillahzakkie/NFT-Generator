@@ -28,21 +28,21 @@ contract("NftGenerator", async ([deployer, user1, user2]) => {
 		});
 	});
 
-	// describe("random function", () => {
-	// 	it("should generate a word containing 4 random characters", async () => {
-	// 		const _randowWord = await this.contract.random();
-	// 		expect(_randowWord.split(" ").length).to.equal(4);
-	// 	});
-	// });
+	describe("random function", () => {
+		it("should generate a word containing 4 random characters", async () => {
+			const _randowWord = await this.contract.random();
+			expect(_randowWord.split(" ").length).to.equal(4);
+		});
+	});
 
 	describe("mint function", () => {
 		let _reciept;
 
 		beforeEach(async () => {
-			const _fee = await this.contract.Fee();
+			// const _fee = await this.contract.Fee();
 			_reciept = await this.contract.mint({
 				from: user1,
-				value: _fee,
+				// value: _fee,
 			});
 		});
 

@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import  "./utils/Base64.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import  "../utils/Base64.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
 // import "hardhat/console.sol";
 
-contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, ReentrancyGuard {    
+contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable {    
     using Base64 for *;
-    uint256 public Fee;
+    uint256  private _totalSupply;
 
     string[] private _alphabets = [
         "A", "B", "C", "D", "E", 
@@ -25,10 +23,14 @@ contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, Reen
     mapping(uint256 => string) public wordLists;
     mapping(string => bool) private _used;
 
-    event Claimed(address indexed user, uint256 tokenId, uint256 timestamp);
+    event Claimed(address indexed user, string word, uint256 tokenId, uint256 timestamp);
 
     constructor() ERC721("NftGenerator", "N-GEN") { 
-        Fee = 0.05 ether;
+        _totalSupply = 0;
+    }
+
+    receive() external  payable {
+        revert();
     }
 
     function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
@@ -65,18 +67,19 @@ contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, Reen
         return output;
     }
 
-    function mint() external payable nonReentrant {
-        require(msg.value >= Fee, "NftGenerator: mint fee must be equal to 0.05 ether");
+    function mint() external {
+        require(_totalSupply + 1 <= 10_000, "NftGenerator: Maximum of 10_000 NFT attained");
         string memory _randomWord = random();
         require(!_used[_randomWord], "NftGenerator: TokenID has already been claimed");
 
         uint256 _tokenId = uint256(keccak256(abi.encode(_randomWord)));
 
+        _totalSupply += 1;
         _used[_randomWord] = true;
         wordLists[_tokenId] = _randomWord;
         _safeMint(_msgSender(), _tokenId);
 
-        emit Claimed(_msgSender(), _tokenId, block.timestamp);
+        emit Claimed(_msgSender(), _randomWord, _tokenId, block.timestamp);
     }
 
     function random() internal view returns(string memory _random) {
@@ -99,10 +102,5 @@ contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable, Ownable, Reen
             )
         );
         return _random;
-    }
-
-    function withdraw(uint256 _amount) external onlyOwner {
-        (bool _success, ) = payable(owner()).call{value: _amount}("");
-        require(_success, "NftGenerator: Ether withdrawal failed");
     }
 }
