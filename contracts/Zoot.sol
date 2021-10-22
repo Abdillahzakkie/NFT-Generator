@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.7;
 
-import  "../utils/Base64.sol";
+import  "./utils/Base64.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol";
-// import "hardhat/console.sol";
 
-contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable {    
+contract Zoot is ERC721, ERC721URIStorage, ERC721Burnable {
+    using Counters for Counters.Counter;
     using Base64 for *;
-    uint256  private _totalSupply;
 
+    Counters.Counter private _totalSupply;
     string[] private _alphabets = [
         "A", "B", "C", "D", "E", 
         "F", "G", "H", "I", "J", 
@@ -21,13 +22,9 @@ contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable {
     ];
 
     mapping(uint256 => string) public wordLists;
-    mapping(string => bool) private _used;
+    mapping(string => uint256) public wordToID;
 
-    event Claimed(address indexed user, string word, uint256 tokenId, uint256 timestamp);
-
-    constructor() ERC721("NftGenerator", "N-GEN") { 
-        _totalSupply = 0;
-    }
+    constructor() ERC721("ZOOT", "ZOOT") {  }
 
     receive() external  payable {
         revert();
@@ -53,44 +50,38 @@ contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable {
             bytes(
                 string(
                     abi.encodePacked(
-                        '{"name": "NftGenerator ',
+                        '{"name": "Zoot ',
                         wordLists[tokenId],
-                        '", "description": "NftGenerator is the first random letter generator.", "image": "data:image/svg+xml;base64,',
+                        '", "description": "Zoot is the first random letter generator.", "image": "data:image/svg+xml;base64,',
                         Base64.encode(bytes(output)),
                         '"}'
                     )
                 )
             )
         );
-        output = string(abi.encodePacked("data:application/json;base64,", json));
-
-        return output;
+        return string(abi.encodePacked("data:application/json;base64,", json));
     }
 
     function mint() external {
-        require(_totalSupply + 1 <= 10_000, "NftGenerator: Maximum of 10_000 NFT attained");
+        require(_totalSupply.current() <= 10_000, "Zoot: Maximum of 10,000 NFT minted");
         string memory _randomWord = random();
-        require(!_used[_randomWord], "NftGenerator: TokenID has already been claimed");
+        require(wordToID[_randomWord] == 0, "Zoot: TokenID has already been claimed");
 
-        uint256 _tokenId = uint256(keccak256(abi.encode(_randomWord)));
+        uint256 _tokenId = _totalSupply.current();
+        _totalSupply.increment();
 
-        _totalSupply += 1;
-        _used[_randomWord] = true;
         wordLists[_tokenId] = _randomWord;
+        wordToID[_randomWord] = _tokenId;
         _safeMint(_msgSender(), _tokenId);
-
-        emit Claimed(_msgSender(), _randomWord, _tokenId, block.timestamp);
     }
 
-    function random() internal view returns(string memory _random) {
+    function random() internal view returns(string memory) {
         uint256[4] memory _randomID;
 
-        for(uint256 i = 0; i < 4; ++i) {
-            uint256 _id = uint256(keccak256(abi.encodePacked(i, _msgSender(), block.timestamp))) % _alphabets.length;
-            _randomID[i] = _id;
-        }
+        for(uint256 i = 0; i < 4; ++i) 
+            _randomID[i] = uint256(keccak256(abi.encodePacked(i, _msgSender(), block.timestamp))) % _alphabets.length;
 
-        _random = string(
+        return string(
             abi.encodePacked(
                 _alphabets[_randomID[0]], 
                 " ", 
@@ -101,6 +92,5 @@ contract NftGenerator is ERC721, ERC721URIStorage, ERC721Burnable {
                 _alphabets[_randomID[3]]
             )
         );
-        return _random;
     }
 }
